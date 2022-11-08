@@ -9,7 +9,7 @@ type pendingTimeout struct {
 func (s pendingTimeout) Timeout(session *session, event internal.Event) (nextState sessionState) {
 	switch event {
 	case internal.PeerTimeout:
-		session.log.OnEvent("Session Timeout")
+		session.log.OnEvent(EventSeverityERROR, "Session Timeout")
 		return latentState{}
 	}
 

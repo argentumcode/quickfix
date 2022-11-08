@@ -17,7 +17,7 @@ func (s logonState) FixMsgIn(session *session, msg *Message) (nextState sessionS
 	}
 
 	if !bytes.Equal(msgType, msgTypeLogon) {
-		session.log.OnEventf("Invalid Session State: Received Msg %s while waiting for Logon", msg)
+		session.log.OnEventf(EventSeverityERROR, "Invalid Session State: Received Msg %s while waiting for Logon", msg)
 		return latentState{}
 	}
 
@@ -47,7 +47,7 @@ func (s logonState) FixMsgIn(session *session, msg *Message) (nextState sessionS
 func (s logonState) Timeout(session *session, e internal.Event) (nextState sessionState) {
 	switch e {
 	case internal.LogonTimeout:
-		session.log.OnEvent("Timed out waiting for logon response")
+		session.log.OnEvent(EventSeverityERROR, "Timed out waiting for logon response")
 		return latentState{}
 	}
 	return s
@@ -58,7 +58,7 @@ func (s logonState) Stop(session *session) (nextState sessionState) {
 }
 
 func shutdownWithReason(session *session, msg *Message, incrNextTargetMsgSeqNum bool, reason string) (nextState sessionState) {
-	session.log.OnEvent(reason)
+	session.log.OnEvent(EventSeverityERROR, reason)
 	logout := session.buildLogout(reason)
 
 	if err := session.dropAndSendInReplyTo(logout, msg); err != nil {

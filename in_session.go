@@ -63,7 +63,7 @@ func (state inSession) Timeout(session *session, event internal.Event) (nextStat
 		if err := session.send(testReq); err != nil {
 			return handleStateError(session, err)
 		}
-		session.log.OnEvent("Sent test request TEST")
+		session.log.OnEvent(EventSeverityINFO, "Sent test request TEST")
 		session.peerTimer.Reset(time.Duration(float64(1.2) * float64(session.HeartBtInt)))
 		return pendingTimeout{state}
 	}
@@ -77,14 +77,14 @@ func (state inSession) handleLogout(session *session, msg *Message) (nextState s
 	}
 
 	if session.IsLoggedOn() {
-		session.log.OnEvent("Received logout request")
-		session.log.OnEvent("Sending logout response")
+		session.log.OnEvent(EventSeverityINFO, "Received logout request")
+		session.log.OnEvent(EventSeverityINFO, "Sending logout response")
 
 		if err := session.sendLogoutInReplyTo("", msg); err != nil {
 			session.logError(err)
 		}
 	} else {
-		session.log.OnEvent("Received logout response")
+		session.log.OnEvent(EventSeverityINFO, "Received logout response")
 	}
 
 	if err := session.store.IncrNextTargetMsgSeqNum(); err != nil {
@@ -106,7 +106,7 @@ func (state inSession) handleTestRequest(session *session, msg *Message) (nextSt
 	}
 	var testReq FIXString
 	if err := msg.Body.GetField(tagTestReqID, &testReq); err != nil {
-		session.log.OnEvent("Test Request with no testRequestID")
+		session.log.OnEvent(EventSeverityWARNING, "Test Request with no testRequestID")
 	} else {
 		heartBt := NewMessage()
 		heartBt.Header.SetField(tagMsgType, FIXString("0"))
@@ -137,7 +137,7 @@ func (state inSession) handleSequenceReset(session *session, msg *Message) (next
 	var newSeqNo FIXInt
 	if err := msg.Body.GetField(tagNewSeqNo, &newSeqNo); err == nil {
 		expectedSeqNum := FIXInt(session.store.NextTargetMsgSeqNum())
-		session.log.OnEventf("Received SequenceReset FROM: %v TO: %v", expectedSeqNum, newSeqNo)
+		session.log.OnEventf(EventSeverityWARNING, "Received SequenceReset FROM: %v TO: %v", expectedSeqNum, newSeqNo)
 
 		switch {
 		case newSeqNo > expectedSeqNum:
@@ -174,7 +174,7 @@ func (state inSession) handleResendRequest(session *session, msg *Message) (next
 
 	endSeqNo := int(endSeqNoField)
 
-	session.log.OnEventf("Received ResendRequest FROM: %d TO: %d", beginSeqNo, endSeqNo)
+	session.log.OnEventf(EventSeverityWARNING, "Received ResendRequest FROM: %d TO: %d", beginSeqNo, endSeqNo)
 	expectedSeqNum := session.store.NextSenderMsgSeqNum()
 
 	if (session.sessionID.BeginString >= BeginStringFIX42 && endSeqNo == 0) ||
@@ -209,7 +209,7 @@ func (state inSession) resendMessages(session *session, beginSeqNo, endSeqNo int
 
 	msgs, err := session.store.GetMessages(beginSeqNo, endSeqNo)
 	if err != nil {
-		session.log.OnEventf("error retrieving messages from store: %s", err.Error())
+		session.log.OnEventf(EventSeverityERROR, "error retrieving messages from store: %s", err.Error())
 		return
 	}
 
@@ -237,7 +237,7 @@ func (state inSession) resendMessages(session *session, beginSeqNo, endSeqNo int
 			}
 		}
 
-		session.log.OnEventf("Resending Message: %v", sentMessageSeqNum)
+		session.log.OnEventf(EventSeverityINFO, "Resending Message: %v", sentMessageSeqNum)
 		msgBytes = msg.build()
 		session.EnqueueBytesAndSend(msgBytes)
 
@@ -383,7 +383,7 @@ func (state *inSession) generateSequenceReset(session *session, beginSeqNo int, 
 	msgBytes := sequenceReset.build()
 
 	session.EnqueueBytesAndSend(msgBytes)
-	session.log.OnEventf("Sent SequenceReset TO: %v", endSeqNo)
+	session.log.OnEventf(EventSeverityINFO, "Sent SequenceReset TO: %v", endSeqNo)
 
 	return
 }

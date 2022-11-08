@@ -18,7 +18,7 @@ func (state logoutState) FixMsgIn(session *session, msg *Message) (nextState ses
 func (state logoutState) Timeout(session *session, event internal.Event) (nextState sessionState) {
 	switch event {
 	case internal.LogoutTimeout:
-		session.log.OnEvent("Timed out waiting for logout response")
+		session.log.OnEvent(EventSeverityERROR, "Timed out waiting for logout response")
 		return latentState{}
 	}
 

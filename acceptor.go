@@ -15,7 +15,7 @@ import (
 	"github.com/quickfixgo/quickfix/config"
 )
 
-//Acceptor accepts connections from FIX clients and manages the associated sessions.
+// Acceptor accepts connections from FIX clients and manages the associated sessions.
 type Acceptor struct {
 	app                   Application
 	settings              *Settings
@@ -43,7 +43,7 @@ type ConnectionValidator interface {
 	Validate(netConn net.Conn, session SessionID) error
 }
 
-//Start accepting connections.
+// Start accepting connections.
 func (a *Acceptor) Start() (err error) {
 	socketAcceptHost := ""
 	if a.settings.GlobalSettings().HasSetting(config.SocketAcceptHost) {
@@ -112,7 +112,7 @@ func (a *Acceptor) Start() (err error) {
 	return
 }
 
-//Stop logs out existing sessions, close their connections, and stop accepting new connections.
+// Stop logs out existing sessions, close their connections, and stop accepting new connections.
 func (a *Acceptor) Stop() {
 	defer func() {
 		_ = recover() // suppress sending on closed channel error
@@ -141,7 +141,7 @@ func (a *Acceptor) RemoteAddr(sessionID SessionID) (net.Addr, bool) {
 	return val, ok
 }
 
-//NewAcceptor creates and initializes a new Acceptor.
+// NewAcceptor creates and initializes a new Acceptor.
 func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Settings, logFactory LogFactory) (a *Acceptor, err error) {
 	a = &Acceptor{
 		app:             app,
@@ -200,17 +200,17 @@ func (a *Acceptor) listenForConnections(listener net.Listener) {
 }
 
 func (a *Acceptor) invalidMessage(msg *bytes.Buffer, err error) {
-	a.globalLog.OnEventf("Invalid Message: %s, %v", msg.Bytes(), err.Error())
+	a.globalLog.OnEventf(EventSeverityERROR, "Invalid Message: %s, %v", msg.Bytes(), err.Error())
 }
 
 func (a *Acceptor) handleConnection(netConn net.Conn) {
 	defer func() {
 		if err := recover(); err != nil {
-			a.globalLog.OnEventf("Connection Terminated with Panic: %s", debug.Stack())
+			a.globalLog.OnEventf(EventSeverityERROR, "Connection Terminated with Panic: %s", debug.Stack())
 		}
 
 		if err := netConn.Close(); err != nil {
-			a.globalLog.OnEvent(err.Error())
+			a.globalLog.OnEventf(EventSeverityWARNING, "Failed to close connection: %v", err)
 		}
 	}()
 
@@ -220,9 +220,9 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	msgBytes, err := parser.ReadMessage()
 	if err != nil {
 		if err == io.EOF {
-			a.globalLog.OnEvent("Connection Terminated")
+			a.globalLog.OnEvent(EventSeverityINFO, "Connection Terminated")
 		} else {
-			a.globalLog.OnEvent(err.Error())
+			a.globalLog.OnEventf(EventSeverityERROR, "Read message error: %v", err)
 		}
 		return
 	}
@@ -291,14 +291,14 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 
 	localConnectionPort := netConn.LocalAddr().(*net.TCPAddr).Port
 	if expectedPort, ok := a.sessionHostPort[sessID]; !ok || expectedPort != localConnectionPort {
-		a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
+		a.globalLog.OnEventf(EventSeverityERROR, "Session %v not found for incoming message: %s", sessID, msgBytes)
 		return
 	}
 
 	// We have a session ID and a network connection. This seems to be a good place for any custom authentication logic.
 	if a.connectionValidator != nil {
 		if err := a.connectionValidator.Validate(netConn, sessID); err != nil {
-			a.globalLog.OnEventf("Unable to validate a connection %v", err.Error())
+			a.globalLog.OnEventf(EventSeverityERROR, "Unable to validate a connection %v", err)
 			return
 		}
 	}
@@ -310,12 +310,12 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	session, ok := a.sessions[sessID]
 	if !ok {
 		if !a.dynamicSessions {
-			a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
+			a.globalLog.OnEventf(EventSeverityERROR, "Session %v not found for incoming message: %s", sessID, msgBytes)
 			return
 		}
 		dynamicSession, err := a.sessionFactory.createSession(sessID, a.storeFactory, a.settings.globalSettings.clone(), a.logFactory, a.app)
 		if err != nil {
-			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
+			a.globalLog.OnEventf(EventSeverityERROR, "Dynamic session %v failed to create: %v", sessID, err)
 			return
 		}
 		a.dynamicSessionChan <- dynamicSession
@@ -328,7 +328,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	msgOut := make(chan []byte)
 
 	if err := session.connect(msgIn, msgOut); err != nil {
-		a.globalLog.OnEventf("Unable to accept %v", err.Error())
+		a.globalLog.OnEventf(EventSeverityERROR, "Unable to accept %v", err)
 		return
 	}
 
@@ -362,7 +362,7 @@ LOOP:
 				session.run()
 				err := UnregisterSession(session.sessionID)
 				if err != nil {
-					a.globalLog.OnEventf("Unregister dynamic session %v failed: %v", session.sessionID, err)
+					a.globalLog.OnEventf(EventSeverityERROR, "Unregister dynamic session %v failed: %v", session.sessionID, err)
 					return
 				}
 				complete <- sessionID
@@ -373,7 +373,7 @@ LOOP:
 				a.sessionAddr.Delete(session.sessionID)
 				delete(sessions, id)
 			} else {
-				a.globalLog.OnEventf("Missing dynamic session %v!", id)
+				a.globalLog.OnEventf(EventSeverityERROR, "Missing dynamic session %v!", id)
 			}
 		}
 	}
@@ -394,7 +394,8 @@ LOOP:
 // Use it when you need a custom authentication logic that includes lower level interactions,
 // like mTLS auth or IP whitelistening.
 // To remove a previously set validator call it with a nil value:
-// 	a.SetConnectionValidator(nil)
+//
+//	a.SetConnectionValidator(nil)
 func (a *Acceptor) SetConnectionValidator(validator ConnectionValidator) {
 	a.connectionValidator = validator
 }
