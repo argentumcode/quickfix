@@ -45,6 +45,10 @@ func (e *EchoApplication) FromApp(msg *quickfix.Message, sessionID quickfix.Sess
 	return router.Route(msg, sessionID)
 }
 
+func (e *EchoApplication) OnReconnection(sessionID quickfix.SessionID) bool {
+	return true
+}
+
 func (e *EchoApplication) processMsg(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	var possResend field.PossResendField
 	msg.Header.Get(&possResend)

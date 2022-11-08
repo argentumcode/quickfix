@@ -195,6 +195,11 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 	reconnect:
 		connectionAttempt++
 		session.log.OnEventf(EventSeverityWARNING, "Reconnecting in %v", session.ReconnectInterval)
+
+		if !session.application.OnReconnection(session.sessionID) {
+			return
+		}
+
 		if !i.waitForReconnectInterval(session.ReconnectInterval) {
 			return
 		}

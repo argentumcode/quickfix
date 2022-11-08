@@ -52,7 +52,7 @@ func (s *QuickFIXSuite) MessageEqualsBytes(expectedBytes []byte, msg *Message) {
 	s.Equal(string(actualBytes), string(expectedBytes))
 }
 
-//MockStore wraps a memory store and mocks Refresh for convenience
+// MockStore wraps a memory store and mocks Refresh for convenience
 type MockStore struct {
 	mock.Mock
 	memoryStore
@@ -110,6 +110,10 @@ func (e *MockApp) FromApp(msg *Message, sessionID SessionID) (reject MessageReje
 	}
 
 	return nil
+}
+
+func (e *MockApp) OnReconnection(sessionID SessionID) bool {
+	return true
 }
 
 type MessageFactory struct {
