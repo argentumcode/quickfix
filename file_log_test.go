@@ -112,7 +112,7 @@ func TestFileLog_Append(t *testing.T) {
 		t.Error("Unexpected EOF")
 	}
 
-	helper.Log.OnEvent("Event")
+	helper.Log.OnEvent(EventSeverityINFO, "Event")
 	if !eventScanner.Scan() {
 		t.Error("Unexpected EOF")
 	}
@@ -123,7 +123,7 @@ func TestFileLog_Append(t *testing.T) {
 		t.Error("Unexpected EOF")
 	}
 
-	newHelper.Log.OnEvent("Event")
+	newHelper.Log.OnEvent(EventSeverityINFO, "Event")
 	if !eventScanner.Scan() {
 		t.Error("Unexpected EOF")
 	}

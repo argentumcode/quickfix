@@ -19,13 +19,13 @@ func (l screenLog) OnOutgoing(s []byte) {
 	fmt.Printf("<%v, %s, outgoing>\n  (%s)\n", logTime, l.prefix, s)
 }
 
-func (l screenLog) OnEvent(s string) {
+func (l screenLog) OnEvent(severity EventSeverity, s string) {
 	logTime := time.Now().UTC()
-	fmt.Printf("<%v, %s, event>\n  (%s)\n", logTime, l.prefix, s)
+	fmt.Printf("<%v, %s, %s, event>\n  (%s)\n", logTime, l.prefix, severity.String(), s)
 }
 
-func (l screenLog) OnEventf(format string, a ...interface{}) {
-	l.OnEvent(fmt.Sprintf(format, a...))
+func (l screenLog) OnEventf(severity EventSeverity, format string, a ...interface{}) {
+	l.OnEvent(severity, fmt.Sprintf(format, a...))
 }
 
 type screenLogFactory struct{}
@@ -40,7 +40,7 @@ func (screenLogFactory) CreateSessionLog(sessionID SessionID) (Log, error) {
 	return log, nil
 }
 
-//NewScreenLogFactory creates an instance of LogFactory that writes messages and events to stdout.
+// NewScreenLogFactory creates an instance of LogFactory that writes messages and events to stdout.
 func NewScreenLogFactory() LogFactory {
 	return screenLogFactory{}
 }

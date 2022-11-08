@@ -9,7 +9,7 @@ func (state latentState) IsLoggedOn() bool  { return false }
 func (state latentState) IsConnected() bool { return false }
 
 func (state latentState) FixMsgIn(session *session, msg *Message) (nextState sessionState) {
-	session.log.OnEventf("Invalid Session State: Unexpected Msg %v while in Latent state", msg)
+	session.log.OnEventf(EventSeverityERROR, "Invalid Session State: Unexpected Msg %v while in Latent state", msg)
 	return state
 }
 

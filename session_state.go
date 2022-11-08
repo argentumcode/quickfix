@@ -34,7 +34,7 @@ func (sm *stateMachine) Connect(session *session) {
 			return
 		}
 	}
-	session.log.OnEvent("Sending logon request")
+	session.log.OnEvent(EventSeverityINFO, "Sending logon request")
 	if err := session.sendLogon(); err != nil {
 		session.logError(err)
 		return
@@ -70,7 +70,7 @@ func (sm *stateMachine) Incoming(session *session, m fixIn) {
 
 	msg := NewMessage()
 	if err := ParseMessageWithDataDictionary(msg, m.bytes, session.transportDataDictionary, session.appDataDictionary); err != nil {
-		session.log.OnEventf("Msg Parse Error: %v, %q", err.Error(), m.bytes)
+		session.log.OnEventf(EventSeverityERROR, "Msg Parse Error: %v, %q", err.Error(), m.bytes)
 	} else {
 		msg.ReceiveTime = m.receiveTime
 		sm.fixMsgIn(session, msg)
@@ -104,7 +104,7 @@ func (sm *stateMachine) Timeout(session *session, e internal.Event) {
 func (sm *stateMachine) CheckSessionTime(session *session, now time.Time) {
 	if !session.SessionTime.IsInRange(now) {
 		if sm.IsSessionTime() {
-			session.log.OnEvent("Not in session")
+			session.log.OnEvent(EventSeverityINFO, "Not in session")
 		}
 
 		sm.State.ShutdownNow(session)
@@ -117,13 +117,13 @@ func (sm *stateMachine) CheckSessionTime(session *session, now time.Time) {
 	}
 
 	if !sm.IsSessionTime() {
-		session.log.OnEvent("In session")
+		session.log.OnEvent(EventSeverityINFO, "In session")
 		sm.notifyInSessionTime()
 		sm.setState(session, latentState{})
 	}
 
 	if !session.SessionTime.IsInSameRange(session.store.CreationTime(), now) {
-		session.log.OnEvent("Session reset")
+		session.log.OnEvent(EventSeverityINFO, "Session reset")
 		sm.State.ShutdownNow(session)
 		if err := session.dropAndReset(); err != nil {
 			session.logError(err)
@@ -190,8 +190,8 @@ func handleStateError(s *session, err error) sessionState {
 	return latentState{}
 }
 
-//sessionState is the current state of the session state machine. The session state determines how the session responds to
-//incoming messages, timeouts, and requests to send application messages.
+// sessionState is the current state of the session state machine. The session state determines how the session responds to
+// incoming messages, timeouts, and requests to send application messages.
 type sessionState interface {
 	//FixMsgIn is called by the session on incoming messages from the counter party.  The return type is the next session state
 	//following message processing

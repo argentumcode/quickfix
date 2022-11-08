@@ -11,7 +11,7 @@ import (
 	"github.com/quickfixgo/quickfix/internal"
 )
 
-//The Session is the primary FIX abstraction for message communication
+// The Session is the primary FIX abstraction for message communication
 type session struct {
 	store MessageStore
 
@@ -47,11 +47,11 @@ type session struct {
 }
 
 func (s *session) logError(err error) {
-	s.log.OnEvent(err.Error())
+	s.log.OnEvent(EventSeverityERROR, err.Error())
 }
 
-//TargetDefaultApplicationVersionID returns the default application version ID for messages received by this version.
-//Applicable for For FIX.T.1 sessions.
+// TargetDefaultApplicationVersionID returns the default application version ID for messages received by this version.
+// Applicable for For FIX.T.1 sessions.
 func (s *session) TargetDefaultApplicationVersionID() string {
 	return s.targetDefaultApplVerID
 }
@@ -204,7 +204,7 @@ func (s *session) resend(msg *Message) bool {
 	return s.application.ToApp(msg, s.sessionID) == nil
 }
 
-//queueForSend will validate, persist, and queue the message for send
+// queueForSend will validate, persist, and queue the message for send
 func (s *session) queueForSend(msg *Message) error {
 	s.sendMutex.Lock()
 	defer s.sendMutex.Unlock()
@@ -224,7 +224,7 @@ func (s *session) queueForSend(msg *Message) error {
 	return nil
 }
 
-//send will validate, persist, queue the message. If the session is logged on, send all messages in the queue
+// send will validate, persist, queue the message. If the session is logged on, send all messages in the queue
 func (s *session) send(msg *Message) error {
 	return s.sendInReplyTo(msg, nil)
 }
@@ -247,7 +247,7 @@ func (s *session) sendInReplyTo(msg *Message, inReplyTo *Message) error {
 	return nil
 }
 
-//dropAndReset will drop the send queue and reset the message store
+// dropAndReset will drop the send queue and reset the message store
 func (s *session) dropAndReset() error {
 	s.sendMutex.Lock()
 	defer s.sendMutex.Unlock()
@@ -256,7 +256,7 @@ func (s *session) dropAndReset() error {
 	return s.store.Reset()
 }
 
-//dropAndSend will validate and persist the message, then drops the send queue and sends the message.
+// dropAndSend will validate and persist the message, then drops the send queue and sends the message.
 func (s *session) dropAndSend(msg *Message) error {
 	return s.dropAndSendInReplyTo(msg, nil)
 }
@@ -356,7 +356,7 @@ func (s *session) sendBytes(msg []byte) {
 }
 
 func (s *session) doTargetTooHigh(reject targetTooHigh) (nextState resendState, err error) {
-	s.log.OnEventf("MsgSeqNum too high, expecting %v but received %v", reject.ExpectedTarget, reject.ReceivedTarget)
+	s.log.OnEventf(EventSeverityWARNING, "MsgSeqNum too high, expecting %v but received %v", reject.ExpectedTarget, reject.ReceivedTarget)
 	return s.sendResendRequest(reject.ExpectedTarget, reject.ReceivedTarget-1)
 }
 
@@ -388,7 +388,7 @@ func (s *session) sendResendRequest(beginSeq, endSeq int) (nextState resendState
 	if err = s.send(resend); err != nil {
 		return
 	}
-	s.log.OnEventf("Sent ResendRequest FROM: %v TO: %v", beginSeq, endSeqNo)
+	s.log.OnEventf(EventSeverityWARNING, "Sent ResendRequest FROM: %v TO: %v", beginSeq, endSeqNo)
 
 	return
 }
@@ -407,9 +407,9 @@ func (s *session) handleLogon(msg *Message) error {
 
 	resetStore := false
 	if s.InitiateLogon {
-		s.log.OnEvent("Received logon response")
+		s.log.OnEvent(EventSeverityINFO, "Received logon response")
 	} else {
-		s.log.OnEvent("Received logon request")
+		s.log.OnEvent(EventSeverityINFO, "Received logon request")
 		resetStore = s.ResetOnLogon
 
 		if s.RefreshOnLogon {
@@ -423,7 +423,7 @@ func (s *session) handleLogon(msg *Message) error {
 	if err := msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err == nil {
 		if resetSeqNumFlag {
 			if !s.sentReset {
-				s.log.OnEvent("Logon contains ResetSeqNumFlag=Y, resetting sequence numbers to 1")
+				s.log.OnEvent(EventSeverityINFO, "Logon contains ResetSeqNumFlag=Y, resetting sequence numbers to 1")
 				resetStore = true
 			}
 		}
@@ -447,7 +447,7 @@ func (s *session) handleLogon(msg *Message) error {
 			}
 		}
 
-		s.log.OnEvent("Responding to logon request")
+		s.log.OnEvent(EventSeverityINFO, "Responding to logon request")
 		if err := s.sendLogonInReplyTo(resetSeqNumFlag.Bool(), msg); err != nil {
 			return err
 		}
@@ -473,7 +473,7 @@ func (s *session) initiateLogoutInReplyTo(reason string, inReplyTo *Message) (er
 		s.logError(err)
 		return
 	}
-	s.log.OnEvent("Inititated logout request")
+	s.log.OnEvent(EventSeverityINFO, "Inititated logout request")
 	time.AfterFunc(s.LogoutTimeout, func() { s.sessionEvent <- internal.LogoutTimeout })
 	return
 }
@@ -668,7 +668,7 @@ func (s *session) doReject(msg *Message, rej MessageRejectError) error {
 		reply.Body.SetField(tagRefSeqNum, seqNum)
 	}
 
-	s.log.OnEventf("Message Rejected: %v", rej.Error())
+	s.log.OnEventf(EventSeverityWARNING, "Message Rejected: %v", rej.Error())
 	return s.sendInReplyTo(reply, msg)
 }
 
@@ -678,7 +678,7 @@ type fixIn struct {
 }
 
 func (s *session) onDisconnect() {
-	s.log.OnEvent("Disconnected")
+	s.log.OnEvent(EventSeverityWARNING, "Disconnected")
 	if s.ResetOnDisconnect {
 		if err := s.dropAndReset(); err != nil {
 			s.logError(err)
