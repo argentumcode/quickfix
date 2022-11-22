@@ -678,7 +678,7 @@ type fixIn struct {
 }
 
 func (s *session) onDisconnect() {
-	s.log.OnEvent(EventSeverityWARNING, "Disconnected")
+	s.log.OnEvent(EventSeverityINFO, "Disconnected")
 	if s.ResetOnDisconnect {
 		if err := s.dropAndReset(); err != nil {
 			s.logError(err)
