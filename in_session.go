@@ -78,10 +78,12 @@ func (state inSession) handleLogout(session *session, msg *Message) (nextState s
 
 	if session.IsLoggedOn() {
 		session.log.OnEvent(EventSeverityINFO, "Received logout request")
-		session.log.OnEvent(EventSeverityINFO, "Sending logout response")
+		if !session.SkipReplyLogout {
+			session.log.OnEvent(EventSeverityINFO, "Sending logout response")
 
-		if err := session.sendLogoutInReplyTo("", msg); err != nil {
-			session.logError(err)
+			if err := session.sendLogoutInReplyTo("", msg); err != nil {
+				session.logError(err)
+			}
 		}
 	} else {
 		session.log.OnEvent(EventSeverityINFO, "Received logout response")

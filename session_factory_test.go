@@ -615,3 +615,20 @@ func (s *SessionFactorySuite) TestPersistMessages() {
 		s.Equal(test.expected, session.DisableMessagePersist)
 	}
 }
+
+func (s *SessionFactorySuite) TestSkipReplyLogout() {
+	var tests = []struct {
+		setting  string
+		expected bool
+	}{{"Y", true}, {"N", false}}
+
+	for _, test := range tests {
+		s.SetupTest()
+		s.SessionSettings.Set(config.SkipReplyLogout, test.setting)
+		session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+		s.Nil(err)
+		s.NotNil(session)
+
+		s.Equal(test.expected, session.SkipReplyLogout)
+	}
+}

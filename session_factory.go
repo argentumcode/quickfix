@@ -307,6 +307,12 @@ func (f sessionFactory) newSession(
 		s.DisableMessagePersist = !persistMessages
 	}
 
+	if settings.HasSetting(config.SkipReplyLogout) {
+		if s.SkipReplyLogout, err = settings.BoolSetting(config.SkipReplyLogout); err != nil {
+			return
+		}
+	}
+
 	if f.BuildInitiators {
 		if err = f.buildInitiatorSettings(s, settings); err != nil {
 			return
