@@ -240,7 +240,7 @@ func (state inSession) resendMessages(session *session, beginSeqNo, endSeqNo int
 		}
 
 		session.log.OnEventf(EventSeverityINFO, "Resending Message: %v", sentMessageSeqNum)
-		msgBytes = msg.build()
+		msgBytes = msg.resendBuild()
 		session.EnqueueBytesAndSend(msgBytes)
 
 		seqNum = sentMessageSeqNum + 1
